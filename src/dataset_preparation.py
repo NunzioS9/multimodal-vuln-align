@@ -3,9 +3,19 @@ import re
 import csv
 import os
 from collections import Counter
+import spacy
+import nltk
 
-SOURCE_FILE = os.path.join("data", "code_w_descriptions.csv")
-DEST_FILE   = os.path.join("data", "processed", "dataset_vulnerabilita_cleaned.csv")
+
+SOURCE_FILE = os.path.join("../data", "code_w_descriptions.csv")
+DEST_FILE   = os.path.join("../data", "processed", "dataset_vulnerabilita_cleaned.csv")
+nlp = spacy.load("en_core_web_sm", disable=["parser", "ner"])
+
+nltk.download('stopwords', download_dir='./nltk_data', quiet=False)
+nltk.data.path.append('./nltk_data')
+
+from nltk.corpus import stopwords
+stop_words = set(stopwords.words('english'))
 
 # Funzione per rimuovere commenti da codice (sia // che /* */)
 def remove_comments(code):
@@ -43,6 +53,17 @@ def clean_text(text):
     t = re.sub(r"\s+", " ", t)
     return t.strip()
 
+
+# Funzione di lemming 
+def lemming_text(text):
+    doc = nlp(text)
+    return ' '.join([token.lemma_ for token in doc])
+
+def remove_stopwords(text):
+    tokens = text.split()
+    tokens = [t for t in tokens if t not in stop_words]
+    return ' '.join(tokens)
+
 # Funzione di processing
 def process_code(code):
     if pd.isna(code):
@@ -67,6 +88,8 @@ df = pd.read_csv(
 # su CWE_desc per le descrizioni delle vulnerabilità
 df['code'] = df['code'].apply(process_code)
 df['CWE_desc'] = df['CWE_desc'].apply(clean_text)
+df['CWE_desc'] = df['CWE_desc'].apply(remove_stopwords)
+df['CWE_desc'] = df['CWE_desc'].apply(lemming_text)
 
 df.to_csv(DEST_FILE, index=False)
 
